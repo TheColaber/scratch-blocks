@@ -345,12 +345,9 @@ Blockly.InsertionMarkerManager.prototype.shouldUpdatePreviews_ = function(
     } else {
       console.error('Only one of localConnection_ and closestConnection_ was set.');
     }
-  } else { // No connection found.
-    // Only need to update if we were showing a preview before.
-    return !!(this.localConnection_ && this.closestConnection_);
   }
-
-  console.error('Returning true from shouldUpdatePreviews, but it\'s not clear why.');
+  
+  // Grid Snapping
   return true;
 };
 
@@ -413,6 +410,11 @@ Blockly.InsertionMarkerManager.prototype.shouldReplace_ = function() {
   var closest = this.closestConnection_;
   var local = this.localConnection_;
 
+  // Grid Snapping
+  if (!local) {
+    return false;
+  }
+
   // Dragging a block over an existing block in an input should replace the
   // existing block and bump it out.
   if (local.type == Blockly.OUTPUT_VALUE) {
@@ -472,21 +474,12 @@ Blockly.InsertionMarkerManager.prototype.shouldDelete_ = function(candidate,
  * @private
  */
 Blockly.InsertionMarkerManager.prototype.maybeShowPreview_ = function(candidate) {
-  // Nope, don't add a marker.
-  if (this.wouldDeleteBlock_) {
-    return;
-  }
   var closest = candidate.closest;
   var local = candidate.local;
 
-  // Nothing to connect to.
-  if (!closest) {
-    return;
-  }
-
   // Something went wrong and we're trying to connect to an invalid connection.
-  if (closest == this.closestConnection_ ||
-      closest.sourceBlock_.isInsertionMarker()) {
+  if (closest && (closest == this.closestConnection_ ||
+      closest.sourceBlock_.isInsertionMarker())) {
     return;
   }
   // Add an insertion marker or replacement marker.
@@ -655,10 +648,6 @@ Blockly.InsertionMarkerManager.prototype.connectMarker_ = function() {
 
   var isLastInStack = this.lastOnStack_ && local == this.lastOnStack_;
   var imBlock = isLastInStack ? this.lastMarker_ : this.firstMarker_;
-  var imConn = imBlock.getMatchingConnection(local.sourceBlock_, local);
-
-  goog.asserts.assert(imConn != this.markerConnection_,
-      'Made it to connectMarker_ even though the marker isn\'t changing');
 
   // Render disconnected from everything else so that we have a valid
   // connection location.
@@ -666,13 +655,18 @@ Blockly.InsertionMarkerManager.prototype.connectMarker_ = function() {
   imBlock.rendered = true;
   imBlock.getSvgRoot().setAttribute('visibility', 'visible');
 
-  // TODO: positionNewBlock should be on Blockly.BlockSvg, not prototype,
-  // because it doesn't rely on anything in the block it's called on.
-  imBlock.positionNewBlock(imBlock, imConn, closest);
-
-  // Connect() also renders the insertion marker.
-  imConn.connect(closest);
-  this.markerConnection_ = imConn;
+  if (local) {
+    var imConn = imBlock.getMatchingConnection(local.sourceBlock_, local);
+    // TODO: positionNewBlock should be on Blockly.BlockSvg, not prototype,
+    // because it doesn't rely on anything in the block it's called on.
+    imBlock.positionNewBlock(imBlock, imConn, closest);
+  
+    // Connect() also renders the insertion marker.
+    imConn.connect(closest);
+    this.markerConnection_ = imConn;
+  } else {
+    imBlock.snapToGrid(this.topBlock_);
+  }
 };
 
 /**** End insertion marker display functions ****/

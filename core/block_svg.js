@@ -365,14 +365,15 @@ Blockly.BlockSvg.prototype.getRelativeToSurfaceXY = function() {
  * Move a block by a relative offset.
  * @param {number} dx Horizontal offset in workspace units.
  * @param {number} dy Vertical offset in workspace units.
+ * @param {Blockly.BlockSvg} refrenceBlock refrence block
  */
-Blockly.BlockSvg.prototype.moveBy = function(dx, dy) {
+Blockly.BlockSvg.prototype.moveBy = function(dx, dy, refrenceBlock = this) {
   goog.asserts.assert(!this.parentBlock_, 'Block has parent.');
   var eventsEnabled = Blockly.Events.isEnabled();
   if (eventsEnabled) {
     var event = new Blockly.Events.BlockMove(this);
   }
-  var xy = this.getRelativeToSurfaceXY();
+  var xy = refrenceBlock.getRelativeToSurfaceXY();
   this.translate(xy.x + dx, xy.y + dy);
   this.moveConnections_(dx, dy);
   if (eventsEnabled) {
@@ -460,14 +461,15 @@ Blockly.BlockSvg.prototype.clearTransformAttributes_ = function() {
 
 /**
  * Snap this block to the nearest grid point.
+ * @param {Blockly.BlockSvg} refrenceBlock refrence block
  */
-Blockly.BlockSvg.prototype.snapToGrid = function() {
+Blockly.BlockSvg.prototype.snapToGrid = function(refrenceBlock = this) {
   if (!this.workspace) {
     return;  // Deleted block.
   }
-  if (this.workspace.isDragging()) {
-    return;  // Don't bump blocks during a drag.
-  }
+  // if (this.workspace.isDragging()) {
+  //   return;  // Don't bump blocks during a drag.
+  // }
   if (this.getParent()) {
     return;  // Only snap top-level blocks.
   }
@@ -480,14 +482,26 @@ Blockly.BlockSvg.prototype.snapToGrid = function() {
   }
   var spacing = grid.getSpacing();
   var half = spacing / 2;
-  var xy = this.getRelativeToSurfaceXY();
+  var xy = refrenceBlock.getRelativeToSurfaceXY();
   var dx = Math.round((xy.x - half) / spacing) * spacing + half - xy.x;
   var dy = Math.round((xy.y - half) / spacing) * spacing + half - xy.y;
   dx = Math.round(dx);
   dy = Math.round(dy);
   if (dx != 0 || dy != 0) {
-    this.moveBy(dx, dy);
+    this.moveBy(dx, dy, refrenceBlock);
   }
+  /*
+    var spacing = grid.getSpacing();
+  var half = spacing / 2;
+  var xy = refrenceBlock.getRelativeToSurfaceXY();
+  var dx = Math.round((xy.x - half) / spacing) * spacing + half;
+  var dy = Math.round((xy.y - half) / spacing) * spacing + half;
+  dx = Math.round(dx);
+  dy = Math.round(dy);
+  if (dx != 0 || dy != 0) {
+    this.translate(dx, dy);
+  }
+     */
 };
 
 /**
